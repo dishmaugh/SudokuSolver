@@ -1,0 +1,12 @@
+# Historical source files retained locally
+legacy/
+
+# Editor / OS files
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Temporary / backup files
+*.backup
+*.bak
+*~
