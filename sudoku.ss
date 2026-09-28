@@ -13,6 +13,7 @@
 (load "level-three.ss")
 (load "level-four.ss")
 (load "display.ss")
+(load "input.ss")
 
 
 ; ------------------------------------------------------------
@@ -88,26 +89,145 @@
         [(> (level-two-sub-pass) 0)
          (loop)]
 
-        ; Level Three intentionally not enabled yet.
-        ; First establish that the refactor behaves exactly like
-        ; the historical Version 3 solver.
+        [(done?)
+        #t]
+
+        ; Level Three: candidate set reduction.
+        [(> (level-three-row-pass) 0)
+        (loop)]
 
         [(done?)
-         #t]
+        #t]
 
-        ; Level Four: recursive search/backtracking.
+        [(> (level-three-col-pass) 0)
+        (loop)]
+
+        [(done?)
+        #t]
+
+        [(> (level-three-sub-pass) 0)
+        (loop)]
+
+        [(done?)
+        #t]
+
+        ; Level Four intentionally disabled.
         [else
-         (level-four)]))))
+        #f]))))
 
+      ;; ; Level Four: recursive search/backtracking.
+      ;;  [else
+      ;;  (level-four)]))))
+
+
+;; (define sudoku
+;;   (lambda ()
+;;     (load-test-grid)
+
+;;     (if (sudoku-help grid)
+;;         (begin
+;;           (print-sudoku)
+;;           #t)
+;;         (begin
+;;           (printf "Puzzle could not be solved.~%")
+;;           #f))))
+;;
+
+
+;;; ------------------------------------------------------------
+; Solve one puzzle already loaded into the grid.
+; ------------------------------------------------------------
+
+;; (define solve-current-grid
+;;   (lambda ()
+;;     (sudoku-help grid)))
+
+(define solve-current-grid
+  (lambda ()
+    (printf "DEBUG solve-current-grid: entering sudoku-help~%")
+    (sudoku-help grid)))
+
+
+; ------------------------------------------------------------
+; Solve one puzzle block read from a puzzle file.
+; ------------------------------------------------------------
+
+;; (define solve-block
+;;   (lambda (block)
+;;     (input-block block)
+;;     (solve-current-grid)))
+
+(define solve-block
+  (lambda (block)
+    (printf "DEBUG solve-block: loading puzzle~%")
+    (input-block block)
+
+    (printf "DEBUG solve-block: puzzle loaded; calling solve-current-grid~%")
+    (let ([result (solve-current-grid)])
+      (printf "DEBUG solve-block: solve-current-grid returned ~s~%" result)
+      result)))
+
+
+; ------------------------------------------------------------
+; Run every puzzle contained in a test file.
+; ------------------------------------------------------------
+
+(define run-test-file
+  (lambda (filename)
+    (let ([total 0]
+          [solved 0]
+          [failed 0])
+
+      (with-input-from-file filename
+        (lambda ()
+          (let loop ()
+            (let ([block (read)])
+              (unless (eof-object? block)
+                (set! total (+ total 1))
+
+                (if (solve-block block)
+                    (set! solved (+ solved 1))
+                    (set! failed (+ failed 1)))
+
+                (loop))))))
+
+      (printf "~%Test results~%")
+      (printf "------------~%")
+      (printf "File:   ~a~%" filename)
+      (printf "Total:  ~a~%" total)
+      (printf "Solved: ~a~%" solved)
+      (printf "Failed: ~a~%" failed)
+
+      solved)))
+
+
+; ------------------------------------------------------------
+; Public entry point.
+;
+; (sudoku)
+;     Runs the historical regression puzzle.
+;
+; (sudoku "filename")
+;     Runs every puzzle contained in filename.
+; ------------------------------------------------------------
 
 (define sudoku
-  (lambda ()
-    (load-test-grid)
+  (lambda args
+    (cond
+      [(null? args)
+       (load-test-grid)
 
-    (if (sudoku-help grid)
-        (begin
-          (print-sudoku)
-          #t)
-        (begin
-          (printf "Puzzle could not be solved.~%")
-          #f))))
+       (if (solve-current-grid)
+           (begin
+             (print-sudoku)
+             #t)
+           (begin
+             (printf "Puzzle could not be solved.~%")
+             #f))]
+
+      [(= (length args) 1)
+       (run-test-file (car args))]
+
+      [else
+       (error 'sudoku
+              "expected zero arguments or one puzzle filename")])))
